@@ -36,3 +36,4 @@ build/
 .gradle/*
 target/
 !gradle/wrapper/gradle-wrapper.jar
+/out
