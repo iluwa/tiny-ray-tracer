@@ -2,7 +2,7 @@ package com.github.iluwa.tinyraytracer;
 
 import java.awt.*;
 
-public class Material {
+public final class Material {
     private final Color color;
 
     public Material(Color color) {

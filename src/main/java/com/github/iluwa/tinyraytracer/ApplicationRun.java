@@ -20,7 +20,11 @@ public class ApplicationRun {
         spheres.add(new Sphere(new Point3D(-1, -1.5, -12), 2, redRubber));
         spheres.add(new Sphere(new Point3D(1.5, -0.5, -18), 3, redRubber));
         spheres.add(new Sphere(new Point3D(7, 5, -18), 4, ivory));
-        r.run(spheres);
+
+        List<Light> lights = new ArrayList<>();
+        lights.add(new Light(new Point3D(-20, 20, 20), 1.5));
+
+        r.run(spheres, lights);
         try {
             r.toFile("out/out.jpeg", "jpeg");
         } catch (IOException e) {

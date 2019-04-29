@@ -17,6 +17,10 @@ public final class Sphere {
         return material;
     }
 
+    public Point3D getCenter() {
+        return center;
+    }
+
     public RayIntersection rayIntersect(Point3D orig, Point3D dir) {
         Point3D l = center.subtract(orig);
         double tca = l.dotProduct(dir);
@@ -31,6 +35,6 @@ public final class Sphere {
             //t0 = t1;
             return RayIntersection.NOT_INTERSECTED;
         }
-        return new RayIntersection(true, t0);
+        return new RayIntersection(true, t0, this);
     }
 }

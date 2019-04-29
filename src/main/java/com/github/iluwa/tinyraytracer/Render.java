@@ -22,7 +22,7 @@ public final class Render {
         frameBuffer = new Color[width * height];
     }
 
-    public void run(List<Sphere> spheres) {
+    public void run(List<Sphere> spheres, List<Light> lights) {
         for (int j = 0; j < height; j++) {
             for (int i = 0; i < width; i++) {
                 frameBuffer[i + j * width] = new Color((float) j / height, (float) i / width, 0);
@@ -33,30 +33,38 @@ public final class Render {
                 double x = (2 * (i + 0.5d) / width - 1) * Math.tan(FOV / 2) * width / height;
                 double y = -(2 * (j + 0.5d) / height - 1) * Math.tan(FOV / 2);
                 Point3D dir = new Point3D(x, y, -1).normalize();
-                frameBuffer[i + j * width] = castRay(Point3D.ZERO, dir, spheres);
+                frameBuffer[i + j * width] = castRay(Point3D.ZERO, dir, spheres, lights);
             }
         }
     }
 
-    private Color castRay(Point3D orig, Point3D dir, List<Sphere> spheres) {
-        Optional<Sphere> intersectedSphere = Optional.ofNullable(sceneIntersect(orig, dir, spheres));
-        if (!intersectedSphere.isPresent()) {
+    private Color castRay(Point3D orig, Point3D dir, List<Sphere> spheres, List<Light> lights) {
+        RayIntersection rayIntersection = sceneIntersect(orig, dir, spheres);
+        if (!rayIntersection.isIntersected()) {
             return new Color(0.2f, 0.7f, 0.8f);
         }
-        return intersectedSphere.get().getMaterial().getColor();
+        float lightIntensivity = 0;
+        for (Light light : lights) {
+            Point3D hit = orig.add(dir.multiply(rayIntersection.getDist()));
+            Point3D n = hit.subtract(rayIntersection.getSphere().getCenter()).normalize();
+            Point3D lightDir = light.getPosition().subtract(hit).normalize();
+            lightIntensivity += light.getIntensivity() * Math.max(0d, lightDir.dotProduct(n));
+        }
+        Color materialColor = rayIntersection.getSphere().getMaterial().getColor();
+        return new Color( materialColor.getRed() * lightIntensivity / 255,
+                materialColor.getGreen() * lightIntensivity / 255,
+                materialColor.getBlue() * lightIntensivity / 255);
     }
 
-    private Sphere sceneIntersect(Point3D orig, Point3D dir, List<Sphere> spheres) {
-        double sphereDist = Double.MAX_VALUE;
-        Sphere closestSphere = null;
+    private RayIntersection sceneIntersect(Point3D orig, Point3D dir, List<Sphere> spheres) {
+        RayIntersection rayIntersection = RayIntersection.NOT_INTERSECTED;
         for (Sphere sphere : spheres) {
-            RayIntersection rayIntersection = sphere.rayIntersect(orig, dir);
-            if (rayIntersection.isIntersected() && rayIntersection.getDist() < sphereDist) {
-                sphereDist = rayIntersection.getDist();
-                closestSphere = sphere;
+            RayIntersection ri = sphere.rayIntersect(orig, dir);
+            if (ri.isIntersected() && ri.getDist() < rayIntersection.getDist()) {
+                rayIntersection = ri;
             }
         }
-        return closestSphere;
+        return rayIntersection;
     }
 
     public void toFile(String fileName, String fileFormat) throws IOException {
