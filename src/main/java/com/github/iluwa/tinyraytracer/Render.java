@@ -8,7 +8,6 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 
 public final class Render {
     private static final double FOV = Math.PI / 4;
@@ -43,17 +42,34 @@ public final class Render {
         if (!rayIntersection.isIntersected()) {
             return new Color(0.2f, 0.7f, 0.8f);
         }
-        float lightIntensivity = 0;
+        float diffuseLightIntensivity = 0;
+        float specularLigthIntensivity = 0;
         for (Light light : lights) {
             Point3D hit = orig.add(dir.multiply(rayIntersection.getDist()));
             Point3D n = hit.subtract(rayIntersection.getSphere().getCenter()).normalize();
             Point3D lightDir = light.getPosition().subtract(hit).normalize();
-            lightIntensivity += light.getIntensivity() * Math.max(0d, lightDir.dotProduct(n));
+            diffuseLightIntensivity += light.getIntensivity() * Math.max(0d, lightDir.dotProduct(n));
+            specularLigthIntensivity += light.getIntensivity() * Math.pow(
+                    Math.max(0d, -reflect(lightDir, n).dotProduct(dir)),
+                    rayIntersection.getSphere().getMaterial().getSpecularExponent());
         }
-        Color materialColor = rayIntersection.getSphere().getMaterial().getColor();
-        return new Color( materialColor.getRed() * lightIntensivity / 255,
-                materialColor.getGreen() * lightIntensivity / 255,
-                materialColor.getBlue() * lightIntensivity / 255);
+        Material material = rayIntersection.getSphere().getMaterial();
+        return new Color(
+                calculateColorComponent(material.getDiffuseColor().getRed(), material,
+                        diffuseLightIntensivity, specularLigthIntensivity),
+                calculateColorComponent(material.getDiffuseColor().getGreen(), material,
+                        diffuseLightIntensivity, specularLigthIntensivity),
+                calculateColorComponent(material.getDiffuseColor().getBlue(), material,
+                        diffuseLightIntensivity, specularLigthIntensivity));
+
+    }
+
+    private float calculateColorComponent(int baseColorComponent,
+                                        Material material,
+                                        float diffuseLightIntensivity,
+                                        float specularLigthIntensivity) {
+        return Math.min(1, baseColorComponent * diffuseLightIntensivity * material.getDiffuseAlbedo() / 255f +
+                specularLigthIntensivity * material.getSpecularAlbedo());
     }
 
     private RayIntersection sceneIntersect(Point3D orig, Point3D dir, List<Sphere> spheres) {
@@ -65,6 +81,10 @@ public final class Render {
             }
         }
         return rayIntersection;
+    }
+
+    private Point3D reflect(Point3D I, Point3D N) {
+        return I.subtract(N.multiply(2).crossProduct(I.crossProduct(N)));
     }
 
     public void toFile(String fileName, String fileFormat) throws IOException {
