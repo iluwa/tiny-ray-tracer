@@ -16,10 +16,10 @@ public class ApplicationRun {
         Material ivory = new Material(new Color(0.4f, 0.4f, 0.3f), 50d, 0.6f, 0.3f);
         Material redRubber = new Material(new Color(0.3f, 0.1f, 0.1f), 10d, 0.9f, 0.2f);
         List<Sphere> spheres = new ArrayList<>();
-        spheres.add(new Sphere(new Point3D(-3, 0, -16), 2, ivory));
-        spheres.add(new Sphere(new Point3D(-1, -1.5, -12), 3.5, redRubber));
-        spheres.add(new Sphere(new Point3D(1.5, -0.5, -18), 3, redRubber));
-        spheres.add(new Sphere(new Point3D(5, 3, -18), 4, ivory));
+        spheres.add(new Sphere(new Point3D(-3, 0, -15), 2, ivory));
+        spheres.add(new Sphere(new Point3D(-1, -1.5, -12), 2, redRubber));
+        spheres.add(new Sphere(new Point3D(1.5, -0.5, -17), 3, redRubber));
+        spheres.add(new Sphere(new Point3D(6, 4, -15), 4, ivory));
 
         List<Light> lights = new ArrayList<>();
         lights.add(new Light(new Point3D(-20, 20, 20), 1.5));
