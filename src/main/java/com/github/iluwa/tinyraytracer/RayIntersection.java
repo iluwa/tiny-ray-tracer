@@ -1,7 +1,7 @@
 package com.github.iluwa.tinyraytracer;
 
 public final class RayIntersection {
-    public final static RayIntersection NOT_INTERSECTED = new RayIntersection(false, Double.MAX_VALUE, null);
+    public static final RayIntersection NOT_INTERSECTED = new RayIntersection(false, Double.MAX_VALUE, null);
     private final boolean isIntersected;
     private final double dist;
     private final Sphere sphere;

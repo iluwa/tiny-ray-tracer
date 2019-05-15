@@ -32,21 +32,27 @@ public final class Render {
                 double x = (2 * (i + 0.5d) / width - 1) * Math.tan(FOV / 2) * width / height;
                 double y = -(2 * (j + 0.5d) / height - 1) * Math.tan(FOV / 2);
                 Point3D dir = new Point3D(x, y, -1).normalize();
-                frameBuffer[i + j * width] = castRay(Point3D.ZERO, dir, spheres, lights);
+                frameBuffer[i + j * width] = castRay(Point3D.ZERO, dir, spheres, lights, 0);
             }
         }
     }
 
-    private Color castRay(Point3D orig, Point3D dir, List<Sphere> spheres, List<Light> lights) {
+    private Color castRay(Point3D orig, Point3D dir, List<Sphere> spheres, List<Light> lights, int depth) {
         RayIntersection rayIntersection = sceneIntersect(orig, dir, spheres);
-        if (!rayIntersection.isIntersected()) {
+        if (depth > 4 || !rayIntersection.isIntersected()) {
             return new Color(0.2f, 0.7f, 0.8f);
         }
+        Point3D hit = orig.add(dir.multiply(rayIntersection.getDist()));
+        Point3D n = hit.subtract(rayIntersection.getSphere().getCenter()).normalize();
+
+        Point3D reflectDir = reflect(dir, n).normalize();
+        Point3D reflectOrig = reflectDir.dotProduct(n) < 0 ?
+                hit.subtract(n.multiply(0.001)) : hit.add(n.multiply(0.001));
+        Color reflectColor = castRay(reflectOrig, reflectDir, spheres, lights, depth + 1);
+
         float diffuseLightIntensivity = 0;
         float specularLigthIntensivity = 0;
         for (Light light : lights) {
-            Point3D hit = orig.add(dir.multiply(rayIntersection.getDist()));
-            Point3D n = hit.subtract(rayIntersection.getSphere().getCenter()).normalize();
             Point3D lightDir = light.getPosition().subtract(hit).normalize();
             double lightDistance = light.getPosition().subtract(hit).magnitude();
             Point3D shadowOrig = lightDir.dotProduct(n) < 0 ?
@@ -63,12 +69,12 @@ public final class Render {
                     rayIntersection.getSphere().getMaterial().getSpecularExponent());
         }
         Material material = rayIntersection.getSphere().getMaterial();
-        float red = calculateColorComponent(material.getDiffuseColor().getRed(), material,
-                diffuseLightIntensivity, specularLigthIntensivity);
-        float green = calculateColorComponent(material.getDiffuseColor().getGreen(), material,
-                diffuseLightIntensivity, specularLigthIntensivity);
-        float blue = calculateColorComponent(material.getDiffuseColor().getBlue(), material,
-                diffuseLightIntensivity, specularLigthIntensivity);
+        float red = calculateColorComponent(material.getDiffuseColor().getRed(), reflectColor.getRed(),
+                material, diffuseLightIntensivity, specularLigthIntensivity);
+        float green = calculateColorComponent(material.getDiffuseColor().getGreen(), reflectColor.getGreen(),
+                material, diffuseLightIntensivity, specularLigthIntensivity);
+        float blue = calculateColorComponent(material.getDiffuseColor().getBlue(), reflectColor.getBlue(),
+                material, diffuseLightIntensivity, specularLigthIntensivity);
         float max = Math.max(red, Math.max(green, blue));
         if (max > 1f) {
             red /= max;
@@ -80,11 +86,13 @@ public final class Render {
     }
 
     private float calculateColorComponent(int baseColorComponent,
+                                        int reflectColorComponent,
                                         Material material,
                                         float diffuseLightIntensivity,
                                         float specularLigthIntensivity) {
         return baseColorComponent * diffuseLightIntensivity * material.getDiffuseAlbedo() / 255f +
-                specularLigthIntensivity * material.getSpecularAlbedo();
+                specularLigthIntensivity * material.getSpecularAlbedo() +
+                reflectColorComponent * material.getReflectAlbedo() / 255f;
     }
 
     private RayIntersection sceneIntersect(Point3D orig, Point3D dir, List<Sphere> spheres) {
