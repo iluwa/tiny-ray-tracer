@@ -26,15 +26,17 @@ public final class Sphere {
         double tca = l.dotProduct(dir);
         double d2 = l.dotProduct(l) - tca * tca;
         if (d2 > radius) {
-            return RayIntersection.NOT_INTERSECTED;
+            return null;
         }
         double thc = Math.sqrt(radius * radius - d2);
         double t0 = tca - thc;
         double t1 = tca + thc;
         if (t0 < 0) {
             //t0 = t1;
-            return RayIntersection.NOT_INTERSECTED;
+            return null;
         }
-        return new RayIntersection(true, t0, this);
+        Point3D hit = orig.add(dir.multiply(t0));
+        Point3D N = hit.subtract(center).normalize();
+        return new RayIntersection(t0, N, hit, material);
     }
 }

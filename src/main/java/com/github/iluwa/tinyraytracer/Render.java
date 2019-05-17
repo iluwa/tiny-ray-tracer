@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 public final class Render {
     private static final double FOV = Math.PI / 4;
@@ -39,13 +40,13 @@ public final class Render {
 
     private Color castRay(Point3D orig, Point3D dir, List<Sphere> spheres, List<Light> lights, int depth) {
         RayIntersection rayIntersection = sceneIntersect(orig, dir, spheres);
-        if (depth > 4 || !rayIntersection.isIntersected()) {
+        if (depth > 4 || rayIntersection == null) {
             return new Color(0.2f, 0.7f, 0.8f);
         }
-        Material material = rayIntersection.getSphere().getMaterial();
+        Material material = rayIntersection.getMaterial();
 
-        Point3D hit = orig.add(dir.multiply(rayIntersection.getDist()));
-        Point3D N = hit.subtract(rayIntersection.getSphere().getCenter()).normalize();
+        Point3D hit = rayIntersection.getHit();
+        Point3D N = rayIntersection.getN();
 
         Point3D reflectDir = reflect(dir, N).normalize();
         Point3D reflectOrig = reflectDir.dotProduct(N) < 0 ?
@@ -65,7 +66,7 @@ public final class Render {
             Point3D shadowOrig = lightDir.dotProduct(N) < 0 ?
                     hit.subtract(N.multiply(0.001)) : hit.add(N.multiply(0.001));
             RayIntersection shadowIntersect = sceneIntersect(shadowOrig, lightDir, spheres);
-            if (shadowIntersect.isIntersected() &&
+            if (shadowIntersect != null &&
                     shadowOrig.add(lightDir.multiply(shadowIntersect.getDist())).subtract(shadowOrig).magnitude() < lightDistance) {
                 continue;
             }
@@ -73,7 +74,7 @@ public final class Render {
             diffuseLightIntensivity += light.getIntensivity() * Math.max(0d, lightDir.dotProduct(N));
             specularLigthIntensivity += light.getIntensivity() * Math.pow(
                     Math.max(0d, -reflect(lightDir.multiply(-1), N).dotProduct(dir)),
-                    rayIntersection.getSphere().getMaterial().getSpecularExponent());
+                    rayIntersection.getMaterial().getSpecularExponent());
         }
 
         float red = calculateColorComponent(material.getDiffuseColor().getRed(), reflectColor.getRed(),
@@ -108,14 +109,27 @@ public final class Render {
     }
 
     private RayIntersection sceneIntersect(Point3D orig, Point3D dir, List<Sphere> spheres) {
-        RayIntersection rayIntersection = RayIntersection.NOT_INTERSECTED;
+        double tempDist = Double.MAX_VALUE;
+        RayIntersection sphereIntersection = null;
         for (Sphere sphere : spheres) {
             RayIntersection ri = sphere.rayIntersect(orig, dir);
-            if (ri.isIntersected() && ri.getDist() < rayIntersection.getDist()) {
-                rayIntersection = ri;
+            if (ri != null && ri.getDist() < tempDist) {
+                sphereIntersection = ri;
+                tempDist = sphereIntersection.getDist();
             }
         }
-        return rayIntersection;
+
+        if (Math.abs(dir.getY()) > 0.001) {
+            double d = -(orig.getY() + 4) / dir.getY();
+            Point3D pt = orig.add(dir.multiply(d));
+            if (d > 0 && Math.abs(pt.getX()) < 10 && pt.getZ() < -10 && pt.getZ() > -30 && d < tempDist) {
+                Color diffuseColor = (((int) (0.5 * pt.getX() + 1000) + (int) (0.5 * pt.getZ())) & 1) == 1?
+                        Color.WHITE : new Color(1f, 0.7f, 0.3f);
+                Material material = new Material(diffuseColor, 1, 1, 1,0,0, 0);
+                sphereIntersection = new RayIntersection(d, new Point3D(0, 1,0), pt, material);
+            }
+        }
+        return sphereIntersection;
     }
 
     private Point3D reflect(Point3D I, Point3D N) {

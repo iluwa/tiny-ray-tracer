@@ -1,26 +1,33 @@
 package com.github.iluwa.tinyraytracer;
 
+import javafx.geometry.Point3D;
+
 public final class RayIntersection {
-    public static final RayIntersection NOT_INTERSECTED = new RayIntersection(false, Double.MAX_VALUE, null);
-    private final boolean isIntersected;
     private final double dist;
-    private final Sphere sphere;
+    private final Point3D N;
+    private final Point3D hit;
+    private final Material material;
 
-    public RayIntersection(boolean isIntersected, double dist, Sphere sphere) {
-        this.isIntersected = isIntersected;
+    public RayIntersection(double dist, Point3D N, Point3D hit, Material material) {
         this.dist = dist;
-        this.sphere = sphere;
-    }
-
-    public boolean isIntersected() {
-        return isIntersected;
+        this.N = N;
+        this.hit = hit;
+        this.material = material;
     }
 
     public double getDist() {
         return dist;
     }
 
-    public Sphere getSphere() {
-        return sphere;
+    public Point3D getN() {
+        return N;
+    }
+
+    public Point3D getHit() {
+        return hit;
+    }
+
+    public Material getMaterial() {
+        return material;
     }
 }
